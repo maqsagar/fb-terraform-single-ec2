@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+.vscode/
+.env
+.DS_Store.terraform/
+backend/venv/
+
+nginx/
+
+.terraform/
+*.tfstate
+*.tfstate.backup
