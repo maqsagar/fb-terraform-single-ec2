@@ -103,9 +103,60 @@ resource "aws_instance" "app_server" {
   key_name               = var.key_name
   subnet_id              = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  user_data              = file("user-data.sh")
+
 
   tags = {
     Name = "flask-express-ec2"
+  }
+}
+
+resource "null_resource" "backend" {
+  depends_on = [aws_instance.app]
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = aws_instance.app.public_ip
+  }
+
+  provisioner "file" {
+    source      = "../backend"
+    destination = "/home/ubuntu/backend"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt update",
+      "sudo apt install -y python3-pip",
+      "cd /home/ubuntu/backend",
+      "pip3 install -r requirements.txt",
+      "nohup python3 app.py > backend.log 2>&1 &"
+    ]
+  }
+}
+
+resource "null_resource" "frontend" {
+  depends_on = [null_resource.backend]
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = aws_instance.app.public_ip
+  }
+
+  provisioner "file" {
+    source      = "../frontend"
+    destination = "/home/ubuntu/frontend"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt install -y nodejs npm",
+      "cd /home/ubuntu/frontend",
+      "npm install",
+      "nohup npm start > frontend.log 2>&1 &"
+    ]
   }
 }
